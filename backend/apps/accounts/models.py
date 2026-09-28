@@ -77,3 +77,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     @property
     def is_staff_role(self):
         return self.role == self.Role.STAFF
+
+    @property
+    def can_delete(self):
+        return self.is_admin
+
+    @property
+    def can_view_activity_logs(self):
+        return self.is_admin or self.is_manager

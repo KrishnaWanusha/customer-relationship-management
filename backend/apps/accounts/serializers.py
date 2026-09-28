@@ -12,6 +12,8 @@ class OrganizationSimpleSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     organization = OrganizationSimpleSerializer(read_only=True)
+    can_delete = serializers.BooleanField(read_only=True)
+    can_view_activity_logs = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = User
@@ -22,10 +24,12 @@ class UserSerializer(serializers.ModelSerializer):
             "last_name",
             "role",
             "organization",
+            "can_delete",
+            "can_view_activity_logs",
             "is_active",
             "created_at",
         ]
-        read_only_fields = ["id", "created_at"]
+        read_only_fields = ["id", "created_at", "can_delete", "can_view_activity_logs"]
 
 
 class LoginSerializer(serializers.Serializer):

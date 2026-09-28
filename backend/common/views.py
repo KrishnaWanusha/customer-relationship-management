@@ -1,10 +1,10 @@
 from rest_framework.permissions import IsAuthenticated
 from django_multitenant.utils import set_current_tenant, unset_current_tenant
-from .permissions import IsTenantUser
+from .permissions import IsTenantUser, RoleBasedAccessPermission
 
 
 class TenantFilteredViewSetMixin:
-    permission_classes = [IsAuthenticated, IsTenantUser]
+    permission_classes = [IsAuthenticated, IsTenantUser, RoleBasedAccessPermission]
 
     def initial(self, request, *args, **kwargs):
         super().initial(request, *args, **kwargs)

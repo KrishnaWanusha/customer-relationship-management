@@ -1,10 +1,19 @@
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.test import RequestFactory, TestCase
-from apps.organizations.models import Organization
+from apps.accounts.serializers import UserSerializer
 from apps.companies.models import Company
 from apps.contacts.models import Contact
-from common.permissions import IsTenantUser
+from apps.organizations.models import Organization
+from common.permissions import (
+    CanDeleteRecord,
+    CanViewActivityLogs,
+    IsAdminRole,
+    IsManagerRole,
+    IsStaffRole,
+    IsTenantUser,
+    RoleBasedAccessPermission,
+)
 from common.serializers import TenantModelSerializer
 
 User = get_user_model()
@@ -215,4 +224,186 @@ class TenantIsolationArchitectureTest(TestCase):
                 company.save()
         finally:
             unset_current_tenant()
+
+
+class RoleBasedAccessControlTest(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.org = Organization.objects.create(name="RBAC Org", slug="rbac-org")
+
+        self.admin_user = User.objects.create_user(
+            email="admin@rbac.com",
+            password="password123",
+            organization=self.org,
+            role=User.Role.ADMIN,
+        )
+        self.manager_user = User.objects.create_user(
+            email="manager@rbac.com",
+            password="password123",
+            organization=self.org,
+            role=User.Role.MANAGER,
+        )
+        self.staff_user = User.objects.create_user(
+            email="staff@rbac.com",
+            password="password123",
+            organization=self.org,
+            role=User.Role.STAFF,
+        )
+        self.company = Company.objects.create(name="RBAC Company", organization=self.org)
+
+    def test_is_admin_role_permission(self):
+        perm = IsAdminRole()
+        req = self.factory.get("/")
+
+        req.user = self.admin_user
+        self.assertTrue(perm.has_permission(req, None))
+
+        req.user = self.manager_user
+        self.assertFalse(perm.has_permission(req, None))
+
+        req.user = self.staff_user
+        self.assertFalse(perm.has_permission(req, None))
+
+    def test_is_manager_role_permission(self):
+        perm = IsManagerRole()
+        req = self.factory.get("/")
+
+        req.user = self.manager_user
+        self.assertTrue(perm.has_permission(req, None))
+
+        req.user = self.admin_user
+        self.assertFalse(perm.has_permission(req, None))
+
+        req.user = self.staff_user
+        self.assertFalse(perm.has_permission(req, None))
+
+    def test_is_staff_role_permission(self):
+        perm = IsStaffRole()
+        req = self.factory.get("/")
+
+        req.user = self.staff_user
+        self.assertTrue(perm.has_permission(req, None))
+
+        req.user = self.manager_user
+        self.assertFalse(perm.has_permission(req, None))
+
+        req.user = self.admin_user
+        self.assertFalse(perm.has_permission(req, None))
+
+    def test_crm_rbac_admin_full_access(self):
+        perm = RoleBasedAccessPermission()
+
+        for method, req_func in [
+            ("GET", self.factory.get),
+            ("POST", self.factory.post),
+            ("PUT", self.factory.put),
+            ("PATCH", self.factory.patch),
+            ("DELETE", self.factory.delete),
+        ]:
+            req = req_func("/")
+            req.user = self.admin_user
+            self.assertTrue(perm.has_permission(req, None), f"Admin should have {method} permission")
+            self.assertTrue(perm.has_object_permission(req, None, self.company), f"Admin should have {method} object permission")
+
+    def test_crm_rbac_manager_cannot_delete(self):
+        perm = RoleBasedAccessPermission()
+
+        # Manager can read, create, update
+        for method, req_func in [
+            ("GET", self.factory.get),
+            ("POST", self.factory.post),
+            ("PUT", self.factory.put),
+            ("PATCH", self.factory.patch),
+        ]:
+            req = req_func("/")
+            req.user = self.manager_user
+            self.assertTrue(perm.has_permission(req, None), f"Manager should have {method} permission")
+            self.assertTrue(perm.has_object_permission(req, None, self.company), f"Manager should have {method} object permission")
+
+        # Manager CANNOT delete
+        del_req = self.factory.delete("/")
+        del_req.user = self.manager_user
+        self.assertFalse(perm.has_permission(del_req, None))
+        self.assertFalse(perm.has_object_permission(del_req, None, self.company))
+
+    def test_crm_rbac_staff_cannot_delete(self):
+        perm = RoleBasedAccessPermission()
+
+        # Staff can read, create, update
+        for method, req_func in [
+            ("GET", self.factory.get),
+            ("POST", self.factory.post),
+            ("PUT", self.factory.put),
+            ("PATCH", self.factory.patch),
+        ]:
+            req = req_func("/")
+            req.user = self.staff_user
+            self.assertTrue(perm.has_permission(req, None), f"Staff should have {method} permission")
+            self.assertTrue(perm.has_object_permission(req, None, self.company), f"Staff should have {method} object permission")
+
+        # Staff CANNOT delete
+        del_req = self.factory.delete("/")
+        del_req.user = self.staff_user
+        self.assertFalse(perm.has_permission(del_req, None))
+        self.assertFalse(perm.has_object_permission(del_req, None, self.company))
+
+    def test_can_delete_record_permission(self):
+        perm = CanDeleteRecord()
+
+        # Non-delete methods pass
+        req = self.factory.get("/")
+        req.user = self.staff_user
+        self.assertTrue(perm.has_permission(req, None))
+
+        # Delete method strictly checks admin
+        del_req = self.factory.delete("/")
+        del_req.user = self.admin_user
+        self.assertTrue(perm.has_permission(del_req, None))
+        self.assertTrue(perm.has_object_permission(del_req, None, self.company))
+
+        del_req.user = self.manager_user
+        self.assertFalse(perm.has_permission(del_req, None))
+        self.assertFalse(perm.has_object_permission(del_req, None, self.company))
+
+        del_req.user = self.staff_user
+        self.assertFalse(perm.has_permission(del_req, None))
+        self.assertFalse(perm.has_object_permission(del_req, None, self.company))
+
+    def test_activity_log_permission(self):
+        perm = CanViewActivityLogs()
+
+        get_req = self.factory.get("/")
+        post_req = self.factory.post("/")
+
+        # Admin can view logs, cannot mutate
+        get_req.user = self.admin_user
+        post_req.user = self.admin_user
+        self.assertTrue(perm.has_permission(get_req, None))
+        self.assertFalse(perm.has_permission(post_req, None))
+
+        # Manager can view logs, cannot mutate
+        get_req.user = self.manager_user
+        post_req.user = self.manager_user
+        self.assertTrue(perm.has_permission(get_req, None))
+        self.assertFalse(perm.has_permission(post_req, None))
+
+        # Staff CANNOT view logs
+        get_req.user = self.staff_user
+        post_req.user = self.staff_user
+        self.assertFalse(perm.has_permission(get_req, None))
+        self.assertFalse(perm.has_permission(post_req, None))
+
+    def test_user_serializer_exposes_role_capabilities_for_frontend_ux(self):
+        admin_data = UserSerializer(self.admin_user).data
+        self.assertTrue(admin_data["can_delete"])
+        self.assertTrue(admin_data["can_view_activity_logs"])
+
+        manager_data = UserSerializer(self.manager_user).data
+        self.assertFalse(manager_data["can_delete"])
+        self.assertTrue(manager_data["can_view_activity_logs"])
+
+        staff_data = UserSerializer(self.staff_user).data
+        self.assertFalse(staff_data["can_delete"])
+        self.assertFalse(staff_data["can_view_activity_logs"])
+
 
