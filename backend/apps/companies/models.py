@@ -1,8 +1,11 @@
 from django.db import models
-from common.models import SoftDeleteModel
+from django_multitenant.mixins import TenantModelMixin
+from common.models import SoftDeleteModel, TenantSoftDeleteManager
 
 
-class Company(SoftDeleteModel):
+class Company(TenantModelMixin, SoftDeleteModel):
+    tenant_id = "organization_id"
+
     organization = models.ForeignKey(
         "organizations.Organization",
         on_delete=models.CASCADE,
@@ -13,6 +16,9 @@ class Company(SoftDeleteModel):
     website = models.URLField(max_length=255, blank=True)
     phone = models.CharField(max_length=50, blank=True)
     address = models.TextField(blank=True)
+
+    objects = TenantSoftDeleteManager()
+    all_objects = models.Manager()
 
     class Meta:
         ordering = ["-created_at"]

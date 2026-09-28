@@ -1,9 +1,12 @@
 from django.core.exceptions import ValidationError
 from django.db import models
-from common.models import SoftDeleteModel
+from django_multitenant.mixins import TenantModelMixin
+from common.models import SoftDeleteModel, TenantSoftDeleteManager
 
 
-class Contact(SoftDeleteModel):
+class Contact(TenantModelMixin, SoftDeleteModel):
+    tenant_id = "organization_id"
+
     organization = models.ForeignKey(
         "organizations.Organization",
         on_delete=models.CASCADE,
@@ -19,6 +22,9 @@ class Contact(SoftDeleteModel):
     email = models.EmailField()
     phone = models.CharField(max_length=50, blank=True)
     position = models.CharField(max_length=100, blank=True)
+
+    objects = TenantSoftDeleteManager()
+    all_objects = models.Manager()
 
     class Meta:
         ordering = ["-created_at"]

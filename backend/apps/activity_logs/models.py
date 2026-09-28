@@ -1,8 +1,12 @@
 from django.conf import settings
 from django.db import models
+from django_multitenant.mixins import TenantModelMixin
+from django_multitenant.models import TenantManager
 
 
-class ActivityLog(models.Model):
+class ActivityLog(TenantModelMixin, models.Model):
+    tenant_id = "organization_id"
+
     class Action(models.TextChoices):
         CREATE = "CREATE", "Create"
         UPDATE = "UPDATE", "Update"
@@ -25,6 +29,8 @@ class ActivityLog(models.Model):
     object_id = models.CharField(max_length=100, db_index=True)
     details = models.JSONField(default=dict, blank=True)
     timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    objects = TenantManager()
 
     class Meta:
         ordering = ["-timestamp"]

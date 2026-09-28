@@ -1,6 +1,9 @@
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from django_multitenant.mixins import TenantManagerMixin, TenantModelMixin
+from django_multitenant.utils import get_current_tenant, get_tenant_filters
+
 
 class SoftDeleteQuerySet(models.QuerySet):
     def delete(self, deleted_by=None):
@@ -19,6 +22,7 @@ class SoftDeleteQuerySet(models.QuerySet):
     def deleted(self):
         return self.filter(is_deleted=True)
 
+
 class SoftDeleteManager(models.Manager):
     def get_queryset(self):
         return SoftDeleteQuerySet(self.model, using=self._db).filter(is_deleted=False)
@@ -30,12 +34,44 @@ class SoftDeleteManager(models.Manager):
         return SoftDeleteQuerySet(self.model, using=self._db).filter(is_deleted=True)
 
 
+class TenantSoftDeleteQuerySet(SoftDeleteQuerySet):
+    def for_tenant(self, organization):
+        if not organization:
+            return self.none()
+        return self.filter(organization=organization)
+
+    def for_user(self, user):
+        if not user or not user.is_authenticated or not getattr(user, "organization_id", None):
+            return self.none()
+        return self.filter(organization=user.organization)
+
+
+class TenantSoftDeleteManager(TenantManagerMixin, SoftDeleteManager):
+    _queryset_class = TenantSoftDeleteQuerySet
+
+    def get_queryset(self):
+        return super().get_queryset().filter(is_deleted=False)
+
+    def all_with_deleted(self):
+        return super().get_queryset()
+
+    def deleted(self):
+        return self.all_with_deleted().filter(is_deleted=True)
+
+    def for_tenant(self, organization):
+        return self._queryset_class(self.model, using=self._db).for_tenant(organization).filter(is_deleted=False)
+
+    def for_user(self, user):
+        return self._queryset_class(self.model, using=self._db).for_user(user).filter(is_deleted=False)
+
+
 class TimeStampedModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         abstract = True
+
 
 class SoftDeleteModel(TimeStampedModel):
     is_deleted = models.BooleanField(default=False, db_index=True)
