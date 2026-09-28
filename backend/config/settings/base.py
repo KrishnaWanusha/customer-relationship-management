@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "apps.accounts",
     "apps.companies",
     "apps.contacts",
+    "apps.activity_logs",
 ]
 
 AUTH_USER_MODEL = "accounts.User"
