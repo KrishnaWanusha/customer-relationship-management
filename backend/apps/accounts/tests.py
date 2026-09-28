@@ -1,13 +1,13 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
-from .models import Organization
+from apps.organizations.models import Organization
 
 User = get_user_model()
 
 
 class UserModelTest(TestCase):
     def setUp(self):
-        self.org = Organization.objects.create(name="Stark Industries")
+        self.org = Organization.objects.create(name="Alpha Org")
 
     def test_create_user_with_role_and_organization(self):
         user = User.objects.create_user(

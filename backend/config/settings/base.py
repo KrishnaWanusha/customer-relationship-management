@@ -41,6 +41,8 @@ INSTALLED_APPS = [
     "django_filters",
     "apps.organizations",
     "apps.accounts",
+    "apps.companies",
+    "apps.contacts",
 ]
 
 AUTH_USER_MODEL = "accounts.User"
