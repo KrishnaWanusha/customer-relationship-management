@@ -17,6 +17,7 @@ api_v1_patterns = [
     path("health/", health_check, name="health-check"),
     path("auth/", include("apps.accounts.urls")),
     path("companies/", include("apps.companies.urls")),
+    path("contacts/", include("apps.contacts.urls")),
 ]
 
 urlpatterns = [
