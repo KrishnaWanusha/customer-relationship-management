@@ -4,6 +4,9 @@ export interface OrganizationSimple {
   id: string
   name: string
   slug: string
+  subscription_plan?: "Basic" | "Pro" | string
+  plan?: string
+  created_at?: string
 }
 
 export interface User {

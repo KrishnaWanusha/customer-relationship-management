@@ -96,10 +96,18 @@ export function AppLayout() {
             <h1 className="text-lg font-bold tracking-tight">Enterprise CRM</h1>
           </div>
           {user?.organization && (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/60 px-2.5 py-1.5 rounded-md mt-3">
-              <span className="font-semibold text-foreground truncate max-w-[170px]">
+            <div className="flex items-center justify-between gap-1.5 text-xs text-muted-foreground bg-muted/60 px-2.5 py-1.5 rounded-md mt-3">
+              <span className="font-semibold text-foreground truncate max-w-[130px]">
                 {user.organization.name}
               </span>
+              <Badge
+                variant="outline"
+                className="text-[10px] px-1.5 py-0 border-primary/30 text-primary font-medium shrink-0"
+              >
+                {user.organization.subscription_plan ||
+                  user.organization.plan ||
+                  "Basic"}
+              </Badge>
             </div>
           )}
         </div>

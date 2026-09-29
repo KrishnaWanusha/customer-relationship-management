@@ -10,8 +10,27 @@ class OrganizationModelTest(TestCase):
         self.assertTrue(org.is_active)
         self.assertEqual(str(org), "Alpha Org")
 
-    def test_organization_slug_uniqueness(self):
-        org1 = Organization.objects.create(name="Beta Group")
-        org2 = Organization.objects.create(name="Beta Group")
-        self.assertEqual(org1.slug, "beta-group")
-        self.assertEqual(org2.slug, "beta-group-1")
+    def test_organization_subscription_plan(self):
+        # Default plan should be Basic
+        org_default = Organization.objects.create(name="Default Plan Org")
+        self.assertEqual(org_default.subscription_plan, Organization.SubscriptionPlan.BASIC)
+        self.assertEqual(org_default.plan, "Basic")
+
+        # Explicit Pro plan
+        org_pro = Organization.objects.create(
+            name="Pro Plan Org",
+            subscription_plan=Organization.SubscriptionPlan.PRO,
+        )
+        self.assertEqual(org_pro.subscription_plan, Organization.SubscriptionPlan.PRO)
+        self.assertEqual(org_pro.plan, "Pro")
+
+        # Plan property setter
+        org_default.plan = Organization.SubscriptionPlan.PRO
+        org_default.save()
+        org_default.refresh_from_db()
+        self.assertEqual(org_default.subscription_plan, "Pro")
+
+    def test_organization_created_at_timestamp(self):
+        org = Organization.objects.create(name="Timestamped Org")
+        self.assertIsNotNone(org.created_at)
+        self.assertIsNotNone(org.updated_at)

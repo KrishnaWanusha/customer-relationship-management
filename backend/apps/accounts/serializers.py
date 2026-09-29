@@ -5,9 +5,11 @@ from .models import User
 
 
 class OrganizationSimpleSerializer(serializers.ModelSerializer):
+    plan = serializers.CharField(source="subscription_plan", read_only=True)
+
     class Meta:
         model = Organization
-        fields = ["id", "name", "slug"]
+        fields = ["id", "name", "slug", "subscription_plan", "plan", "created_at"]
 
 
 class UserSerializer(serializers.ModelSerializer):

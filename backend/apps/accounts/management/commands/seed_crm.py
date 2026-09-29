@@ -42,21 +42,33 @@ class Command(BaseCommand):
         # Organizations
         org_alpha, created = Organization.objects.get_or_create(
             slug="alpha-corp",
-            defaults={"name": "Alpha Corporation", "is_active": True},
+            defaults={
+                "name": "Alpha Corporation",
+                "subscription_plan": Organization.SubscriptionPlan.PRO,
+                "is_active": True,
+            },
         )
         if created:
-            self.stdout.write(self.style.SUCCESS(f"Created organization: {org_alpha.name} (alpha-corp)"))
+            self.stdout.write(self.style.SUCCESS(f"Created organization: {org_alpha.name} (alpha-corp) - Plan: {org_alpha.subscription_plan}"))
         else:
-            self.stdout.write(f"Organization already exists: {org_alpha.name}")
+            org_alpha.subscription_plan = Organization.SubscriptionPlan.PRO
+            org_alpha.save(update_fields=["subscription_plan"])
+            self.stdout.write(f"Organization already exists: {org_alpha.name} - Plan: {org_alpha.subscription_plan}")
 
         org_beta, created = Organization.objects.get_or_create(
             slug="beta-solutions",
-            defaults={"name": "Beta Solutions Ltd", "is_active": True},
+            defaults={
+                "name": "Beta Solutions Ltd",
+                "subscription_plan": Organization.SubscriptionPlan.BASIC,
+                "is_active": True,
+            },
         )
         if created:
-            self.stdout.write(self.style.SUCCESS(f"Created organization: {org_beta.name} (beta-solutions)"))
+            self.stdout.write(self.style.SUCCESS(f"Created organization: {org_beta.name} (beta-solutions) - Plan: {org_beta.subscription_plan}"))
         else:
-            self.stdout.write(f"Organization already exists: {org_beta.name}")
+            org_beta.subscription_plan = Organization.SubscriptionPlan.BASIC
+            org_beta.save(update_fields=["subscription_plan"])
+            self.stdout.write(f"Organization already exists: {org_beta.name} - Plan: {org_beta.subscription_plan}")
 
         # Users for Organization Alpha
         users_to_seed = [
