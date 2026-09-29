@@ -1,0 +1,37 @@
+# Environment and Secrets
+.env
+.env.*
+!.env.example
+*.env
+
+# Dependencies & Build artifacts
+node_modules/
+dist/
+dist-ssr/
+build/
+*.egg-info/
+.venv/
+env/
+venv/
+
+# Python cache & compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Django
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDEs
+.idea/
+.vscode/*
+!.vscode/extensions.json
