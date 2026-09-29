@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
@@ -6,6 +7,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from common.responses import api_error, api_success
 from .serializers import LoginSerializer, UserSerializer
 from .utils import delete_refresh_cookie, set_refresh_cookie
+
+User = get_user_model()
 
 
 class LoginView(APIView):
@@ -48,8 +51,20 @@ class TokenRefreshCookieView(APIView):
 
         try:
             refresh = RefreshToken(raw_refresh)
+            user_id = refresh.payload.get(settings.SIMPLE_JWT.get("USER_ID_CLAIM", "user_id"))
+            user = User.objects.select_related("organization").get(id=user_id)
+            if not user.is_active:
+                return api_error(
+                    message="User account is disabled.",
+                    status_code=401,
+                )
+            if user.organization and not user.organization.is_active:
+                return api_error(
+                    message="Organization account is disabled.",
+                    status_code=401,
+                )
             access = str(refresh.access_token)
-        except (TokenError, InvalidToken):
+        except (TokenError, InvalidToken, User.DoesNotExist):
             return api_error(
                 message="Invalid or expired refresh token.",
                 status_code=401,

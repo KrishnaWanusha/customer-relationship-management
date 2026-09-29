@@ -144,7 +144,11 @@ AWS_QUERYSTRING_EXPIRE = int(os.getenv("AWS_QUERYSTRING_EXPIRE", "3600"))
 AWS_S3_FILE_OVERWRITE = False
 AWS_S3_SIGNATURE_VERSION = "s3v4"
 
-if USE_S3:
+import sys
+
+TESTING = "test" in sys.argv
+
+if USE_S3 and not TESTING:
     if not AWS_STORAGE_BUCKET_NAME:
         from django.core.exceptions import ImproperlyConfigured
         raise ImproperlyConfigured("AWS_STORAGE_BUCKET_NAME must be configured when USE_S3 is True.")
@@ -166,6 +170,7 @@ else:
             "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
         },
     }
+
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

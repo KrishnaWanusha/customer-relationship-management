@@ -163,3 +163,65 @@ class AuthAPITest(APITestCase):
     def test_current_user_me_unauthenticated(self):
         response = self.client.get("/api/v1/auth/me/")
         self.assertEqual(response.status_code, 401)
+
+    def test_login_nonexistent_email(self):
+        response = self.client.post(
+            "/api/v1/auth/login/",
+            {"email": "nobody@nowhere.com", "password": "securepassword123"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(response.data["success"])
+        self.assertEqual(response.data["message"], "Invalid email or password.")
+
+    def test_login_missing_credentials(self):
+        response = self.client.post("/api/v1/auth/login/", {}, format="json")
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(response.data["success"])
+        self.assertIn("email", response.data["errors"])
+        self.assertIn("password", response.data["errors"])
+
+    def test_token_refresh_inactive_user_rejected(self):
+        refresh = RefreshToken.for_user(self.user)
+        self.user.is_active = False
+        self.user.save()
+
+        self.client.cookies[settings.AUTH_COOKIE_NAME] = str(refresh)
+        response = self.client.post("/api/v1/auth/refresh/", format="json")
+        self.assertEqual(response.status_code, 401)
+        self.assertFalse(response.data["success"])
+        self.assertIn("User account is disabled", response.data["message"])
+
+    def test_token_refresh_inactive_organization_rejected(self):
+        refresh = RefreshToken.for_user(self.user)
+        self.org.is_active = False
+        self.org.save()
+
+        self.client.cookies[settings.AUTH_COOKIE_NAME] = str(refresh)
+        response = self.client.post("/api/v1/auth/refresh/", format="json")
+        self.assertEqual(response.status_code, 401)
+        self.assertFalse(response.data["success"])
+        self.assertIn("Organization account is disabled", response.data["message"])
+
+    def test_protected_endpoints_unauthenticated(self):
+        endpoints = [
+            ("get", "/api/v1/auth/me/"),
+            ("get", "/api/v1/companies/"),
+            ("post", "/api/v1/companies/"),
+            ("get", "/api/v1/contacts/"),
+            ("post", "/api/v1/contacts/"),
+        ]
+        for method, endpoint in endpoints:
+            client_method = getattr(self.client, method)
+            response = client_method(endpoint)
+            self.assertEqual(
+                response.status_code,
+                401,
+                f"Endpoint {method.upper()} {endpoint} should require authentication.",
+            )
+
+    def test_protected_endpoints_malformed_token_rejected(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Bearer invalid.jwt.token")
+        response = self.client.get("/api/v1/companies/")
+        self.assertEqual(response.status_code, 401)
+
