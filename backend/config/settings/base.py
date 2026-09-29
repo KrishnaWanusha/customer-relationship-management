@@ -11,7 +11,7 @@ try:
     env_path = BASE_DIR / ".env"
     if not env_path.exists() and (BASE_DIR / ".env.development").exists():
         env_path = BASE_DIR / ".env.development"
-    load_dotenv(env_path)
+    load_dotenv(env_path, override=True)
 except ImportError:
     pass
 

@@ -27,4 +27,21 @@ def custom_exception_handler(exc, context):
             "errors": errors,
         }
 
+    if response is None:
+        try:
+            from botocore.exceptions import BotoCoreError, ClientError
+            if isinstance(exc, (ClientError, BotoCoreError)):
+                from rest_framework import status
+                from rest_framework.response import Response
+                return Response(
+                    {
+                        "success": False,
+                        "message": "Storage service error occurred while processing the file.",
+                        "errors": {"storage": [str(exc)]},
+                    },
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+        except ImportError:
+            pass
+
     return response

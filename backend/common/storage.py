@@ -21,6 +21,7 @@ class PrivateMediaStorage(S3Boto3Storage):
         if "querystring_expire" not in settings_dict:
             settings_dict["querystring_expire"] = getattr(settings, "AWS_QUERYSTRING_EXPIRE", 3600)
             
+        settings_dict["bucket_name"] = bucket_name
         super().__init__(**settings_dict)
 
 
