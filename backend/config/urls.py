@@ -18,6 +18,7 @@ api_v1_patterns = [
     path("auth/", include("apps.accounts.urls")),
     path("companies/", include("apps.companies.urls")),
     path("contacts/", include("apps.contacts.urls")),
+    path("activity-logs/", include("apps.activity_logs.urls")),
 ]
 
 urlpatterns = [

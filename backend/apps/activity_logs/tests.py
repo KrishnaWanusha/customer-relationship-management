@@ -343,3 +343,111 @@ class ContactAutomaticLoggingAPITest(APITestCase):
         self.assertEqual(log.details.get("full_name"), "Rachel Dawes")
 
         self.assertTrue(ActivityLog.objects.filter(object_id=str(contact.id)).exists())
+
+
+class ActivityLogAPITest(APITestCase):
+    def setUp(self):
+        self.org_a = Organization.objects.create(name="Stark Industries")
+        self.org_b = Organization.objects.create(name="Hammer Tech")
+
+        self.admin_a = User.objects.create_user(
+            email="tony@stark.com",
+            password="password123",
+            organization=self.org_a,
+            role=User.Role.ADMIN,
+        )
+        self.manager_a = User.objects.create_user(
+            email="pepper@stark.com",
+            password="password123",
+            organization=self.org_a,
+            role=User.Role.MANAGER,
+        )
+        self.staff_a = User.objects.create_user(
+            email="happy@stark.com",
+            password="password123",
+            organization=self.org_a,
+            role=User.Role.STAFF,
+        )
+        self.admin_b = User.objects.create_user(
+            email="justin@hammer.com",
+            password="password123",
+            organization=self.org_b,
+            role=User.Role.ADMIN,
+        )
+
+        # Create activity logs for Org A
+        self.log_a1 = ActivityLog.objects.create(
+            organization=self.org_a,
+            user=self.admin_a,
+            action=ActivityLog.Action.CREATE,
+            model_name="Company",
+            object_id="101",
+            details={"name": "Arc Reactor Corp"},
+        )
+        self.log_a2 = ActivityLog.objects.create(
+            organization=self.org_a,
+            user=self.manager_a,
+            action=ActivityLog.Action.UPDATE,
+            model_name="Contact",
+            object_id="202",
+            details={"name": "James Rhodes"},
+        )
+        # Create activity log for Org B
+        self.log_b1 = ActivityLog.objects.create(
+            organization=self.org_b,
+            user=self.admin_b,
+            action=ActivityLog.Action.CREATE,
+            model_name="Company",
+            object_id="303",
+            details={"name": "Drones Inc"},
+        )
+
+    def test_admin_can_list_activity_logs(self):
+        self.client.force_authenticate(user=self.admin_a)
+        response = self.client.get("/api/v1/activity-logs/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["success"])
+        results = response.data["data"]["results"]
+        self.assertEqual(len(results), 2)
+        log_ids = [r["id"] for r in results]
+        self.assertIn(self.log_a1.id, log_ids)
+        self.assertIn(self.log_a2.id, log_ids)
+        self.assertNotIn(self.log_b1.id, log_ids)
+
+    def test_manager_can_list_activity_logs(self):
+        self.client.force_authenticate(user=self.manager_a)
+        response = self.client.get("/api/v1/activity-logs/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data["data"]["results"]
+        self.assertEqual(len(results), 2)
+
+    def test_staff_cannot_view_activity_logs(self):
+        self.client.force_authenticate(user=self.staff_a)
+        response = self.client.get("/api/v1/activity-logs/")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_tenant_isolation_org_b_cannot_see_org_a_logs(self):
+        self.client.force_authenticate(user=self.admin_b)
+        response = self.client.get("/api/v1/activity-logs/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data["data"]["results"]
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["id"], self.log_b1.id)
+        # Attempt direct retrieve of Org A log
+        detail_response = self.client.get(f"/api/v1/activity-logs/{self.log_a1.id}/")
+        self.assertEqual(detail_response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_filter_by_action_and_model_name(self):
+        self.client.force_authenticate(user=self.admin_a)
+        response = self.client.get("/api/v1/activity-logs/?action=CREATE")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data["data"]["results"]
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["action"], "CREATE")
+
+        response_model = self.client.get("/api/v1/activity-logs/?model_name=Contact")
+        self.assertEqual(response_model.status_code, status.HTTP_200_OK)
+        results_model = response_model.data["data"]["results"]
+        self.assertEqual(len(results_model), 1)
+        self.assertEqual(results_model[0]["model_name"], "Contact")
+
