@@ -2,7 +2,6 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 from django_multitenant.mixins import TenantManagerMixin, TenantModelMixin
-from django_multitenant.utils import get_current_tenant, get_tenant_filters
 
 
 class SoftDeleteQuerySet(models.QuerySet):
