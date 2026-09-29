@@ -3,10 +3,10 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.test import RequestFactory, TestCase
 from common.storage import PrivateMediaStorage, generate_presigned_url, get_s3_client
-from apps.accounts.serializers import UserSerializer
-from apps.companies.models import Company
-from apps.contacts.models import Contact
-from apps.organizations.models import Organization
+from backend.apps.accounts.serializers import UserSerializer
+from backend.apps.companies.models import Company
+from backend.apps.contacts.models import Contact
+from backend.apps.organizations.models import Organization
 from common.permissions import (
     CanDeleteRecord,
     CanViewActivityLogs,

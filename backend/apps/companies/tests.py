@@ -7,10 +7,10 @@ from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APITestCase
 from PIL import Image
-from apps.activity_logs.models import ActivityLog
-from apps.companies.models import Company, company_logo_upload_path
-from apps.companies.validators import validate_company_logo
-from apps.organizations.models import Organization
+from backend.apps.activity_logs.models import ActivityLog
+from backend.apps.companies.models import Company, company_logo_upload_path
+from backend.apps.companies.validators import validate_company_logo
+from backend.apps.organizations.models import Organization
 
 User = get_user_model()
 

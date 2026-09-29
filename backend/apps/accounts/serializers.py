@@ -1,6 +1,6 @@
 from django.contrib.auth import authenticate
 from rest_framework import serializers
-from apps.organizations.models import Organization
+from backend.apps.organizations.models import Organization
 from .models import User
 
 

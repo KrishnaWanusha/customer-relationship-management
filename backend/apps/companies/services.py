@@ -1,5 +1,5 @@
 from django.db import transaction
-from apps.activity_logs.services import AuditService
+from backend.apps.activity_logs.services import AuditService
 from .models import Company
 
 

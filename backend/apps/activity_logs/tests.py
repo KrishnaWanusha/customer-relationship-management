@@ -6,11 +6,11 @@ from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from apps.organizations.models import Organization
-from apps.companies.models import Company
-from apps.companies.services import CompanyService
-from apps.contacts.models import Contact
-from apps.contacts.services import ContactService
+from backend.apps.organizations.models import Organization
+from backend.apps.companies.models import Company
+from backend.apps.companies.services import CompanyService
+from backend.apps.contacts.models import Contact
+from backend.apps.contacts.services import ContactService
 from .models import ActivityLog
 from .services import AuditService, create_activity_log
 
