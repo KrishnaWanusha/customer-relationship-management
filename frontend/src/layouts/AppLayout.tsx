@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useCallback, useMemo } from "react"
 import { Outlet, NavLink, useNavigate } from "react-router-dom"
 import {
   LayoutDashboard,
@@ -19,42 +19,61 @@ export function AppLayout() {
   const navigate = useNavigate()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     await logout()
     navigate("/login")
-  }
+  }, [logout, navigate])
 
-  const navItems = [
-    {
-      to: "/dashboard",
-      label: "Dashboard",
-      icon: LayoutDashboard,
-      show: true,
-    },
-    {
-      to: "/companies",
-      label: "Companies",
-      icon: Building2,
-      show: true,
-    },
-    {
-      to: "/contacts",
-      label: "Contacts",
-      icon: Users,
-      show: true,
-    },
-    {
-      to: "/activity-logs",
-      label: "Activity Logs",
-      icon: History,
-      show:
-        user?.can_view_activity_logs ??
-        (user?.role === "ADMIN" || user?.role === "MANAGER"),
-    },
-  ]
+  const handleToggleMobileMenu = useCallback(() => {
+    setMobileMenuOpen((prev) => !prev)
+  }, [])
 
-  const getRoleVariant = (role?: string) => {
-    switch (role) {
+  const handleCloseMobileMenu = useCallback(() => {
+    setMobileMenuOpen(false)
+  }, [])
+
+  const canViewActivityLogs = Boolean(
+    user?.can_view_activity_logs ??
+      (user?.role === "ADMIN" || user?.role === "MANAGER"),
+  )
+
+  const navItems = useMemo(
+    () => [
+      {
+        to: "/dashboard",
+        label: "Dashboard",
+        icon: LayoutDashboard,
+        show: true,
+      },
+      {
+        to: "/companies",
+        label: "Companies",
+        icon: Building2,
+        show: true,
+      },
+      {
+        to: "/contacts",
+        label: "Contacts",
+        icon: Users,
+        show: true,
+      },
+      {
+        to: "/activity-logs",
+        label: "Activity Logs",
+        icon: History,
+        show: canViewActivityLogs,
+      },
+    ],
+    [canViewActivityLogs],
+  )
+
+  const visibleNavItems = useMemo(
+    () => navItems.filter((item) => item.show),
+    [navItems],
+  )
+
+  const roleVariant = useMemo(() => {
+    switch (user?.role) {
       case "ADMIN":
         return "destructive"
       case "MANAGER":
@@ -62,7 +81,7 @@ export function AppLayout() {
       default:
         return "secondary"
     }
-  }
+  }, [user?.role])
 
   return (
     <div className="min-h-screen flex bg-background text-foreground">
@@ -87,28 +106,26 @@ export function AppLayout() {
 
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-1">
-          {navItems
-            .filter((item) => item.show)
-            .map((item) => {
-              const Icon = item.icon
-              return (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  className={({ isActive }) =>
-                    cn(
-                      "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                      isActive
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                    )
-                  }
-                >
-                  <Icon className="h-4 w-4 shrink-0" />
-                  {item.label}
-                </NavLink>
-              )
-            })}
+          {visibleNavItems.map((item) => {
+            const Icon = item.icon
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )
+                }
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                {item.label}
+              </NavLink>
+            )
+          })}
         </nav>
 
         {/* User Info & Logout */}
@@ -125,7 +142,7 @@ export function AppLayout() {
               </p>
             </div>
             <Badge
-              variant={getRoleVariant(user?.role)}
+              variant={roleVariant}
               className="shrink-0 text-[10px] px-1.5 py-0.5"
             >
               <Shield className="h-3 w-3 mr-0.5" />
@@ -157,7 +174,7 @@ export function AppLayout() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            onClick={handleToggleMobileMenu}
             aria-label="Toggle navigation menu"
           >
             {mobileMenuOpen ? (
@@ -171,29 +188,27 @@ export function AppLayout() {
         {/* Mobile Dropdown Menu */}
         {mobileMenuOpen && (
           <div className="md:hidden border-b border-border bg-card p-4 space-y-2">
-            {navItems
-              .filter((item) => item.show)
-              .map((item) => {
-                const Icon = item.icon
-                return (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={({ isActive }) =>
-                      cn(
-                        "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium",
-                        isActive
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:bg-muted",
-                      )
-                    }
-                  >
-                    <Icon className="h-4 w-4" />
-                    {item.label}
-                  </NavLink>
-                )
-              })}
+            {visibleNavItems.map((item) => {
+              const Icon = item.icon
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  onClick={handleCloseMobileMenu}
+                  className={({ isActive }) =>
+                    cn(
+                      "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium",
+                      isActive
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-muted",
+                    )
+                  }
+                >
+                  <Icon className="h-4 w-4" />
+                  {item.label}
+                </NavLink>
+              )
+            })}
             <div className="pt-2 border-t border-border flex items-center justify-between">
               <span className="text-xs text-muted-foreground">
                 {user?.email}

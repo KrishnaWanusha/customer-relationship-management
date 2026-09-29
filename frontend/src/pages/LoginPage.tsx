@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useState, useCallback } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { useAuth } from "@/hooks"
 import {
@@ -33,7 +33,7 @@ export function LoginPage() {
     password?: string
   }>({})
 
-  const validate = (): boolean => {
+  const validate = useCallback((): boolean => {
     const errors: { email?: string; password?: string } = {}
 
     const trimmedEmail = email.trim()
@@ -49,45 +49,67 @@ export function LoginPage() {
 
     setFieldErrors(errors)
     return Object.keys(errors).length === 0
-  }
+  }, [email, password])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setGeneralError(null)
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault()
+      setGeneralError(null)
 
-    if (!validate()) {
-      return
-    }
-
-    setIsLoading(true)
-    try {
-      await login({ email: email.trim(), password })
-      navigate(from, { replace: true })
-    } catch (err: unknown) {
-      const apiError = err as ApiError
-      const backendErrors = apiError.errors
-
-      const newFieldErrors: { email?: string; password?: string } = {}
-      if (backendErrors?.email?.length) {
-        newFieldErrors.email = backendErrors.email[0]
-      }
-      if (backendErrors?.password?.length) {
-        newFieldErrors.password = backendErrors.password[0]
+      if (!validate()) {
+        return
       }
 
-      setFieldErrors(newFieldErrors)
+      setIsLoading(true)
+      try {
+        await login({ email: email.trim(), password })
+        navigate(from, { replace: true })
+      } catch (err: unknown) {
+        const apiError = err as ApiError
+        const backendErrors = apiError.errors
 
-      // If backend returned non_field_errors or general message
-      const nonFieldMsg =
-        backendErrors?.non_field_errors?.[0] ||
-        apiError.message ||
-        "Invalid email or password. Please try again."
+        const newFieldErrors: { email?: string; password?: string } = {}
+        if (backendErrors?.email?.length) {
+          newFieldErrors.email = backendErrors.email[0]
+        }
+        if (backendErrors?.password?.length) {
+          newFieldErrors.password = backendErrors.password[0]
+        }
 
-      setGeneralError(nonFieldMsg)
-    } finally {
-      setIsLoading(false)
-    }
-  }
+        setFieldErrors(newFieldErrors)
+
+        const nonFieldMsg =
+          backendErrors?.non_field_errors?.[0] ||
+          apiError.message ||
+          "Invalid email or password. Please try again."
+
+        setGeneralError(nonFieldMsg)
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [validate, login, email, password, navigate, from],
+  )
+
+  const handleEmailChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setEmail(e.target.value)
+      setFieldErrors((prev) =>
+        prev.email ? { ...prev, email: undefined } : prev,
+      )
+    },
+    [],
+  )
+
+  const handlePasswordChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setPassword(e.target.value)
+      setFieldErrors((prev) =>
+        prev.password ? { ...prev, password: undefined } : prev,
+      )
+    },
+    [],
+  )
 
   return (
     <div className="rounded-xl border border-border bg-card p-6 sm:p-8 shadow-sm">
@@ -136,12 +158,7 @@ export function LoginPage() {
               placeholder="user@example.com"
               className="pl-9"
               value={email}
-              onChange={(e) => {
-                setEmail(e.target.value)
-                if (fieldErrors.email) {
-                  setFieldErrors((prev) => ({ ...prev, email: undefined }))
-                }
-              }}
+              onChange={handleEmailChange}
               error={Boolean(fieldErrors.email)}
               disabled={isLoading}
               aria-invalid={Boolean(fieldErrors.email)}
@@ -174,12 +191,7 @@ export function LoginPage() {
               placeholder="••••••••"
               className="pl-9"
               value={password}
-              onChange={(e) => {
-                setPassword(e.target.value)
-                if (fieldErrors.password) {
-                  setFieldErrors((prev) => ({ ...prev, password: undefined }))
-                }
-              }}
+              onChange={handlePasswordChange}
               error={Boolean(fieldErrors.password)}
               disabled={isLoading}
               aria-invalid={Boolean(fieldErrors.password)}

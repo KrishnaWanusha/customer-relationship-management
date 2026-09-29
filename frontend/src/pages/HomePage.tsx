@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import { apiClient } from "@/api"
 import { Button } from "@/components"
 
@@ -12,7 +12,7 @@ export function HomePage() {
   const [healthStatus, setHealthStatus] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const checkBackendHealth = async () => {
+  const checkBackendHealth = useCallback(async () => {
     setLoading(true)
     try {
       const response = await apiClient.get<HealthData>("/health/")
@@ -24,7 +24,7 @@ export function HomePage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">

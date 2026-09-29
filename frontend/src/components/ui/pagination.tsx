@@ -1,3 +1,4 @@
+import { useMemo, useCallback } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "./button"
 import { cn } from "@/utils"
@@ -19,16 +20,18 @@ export function Pagination({
   onPageChange,
   className,
 }: PaginationProps) {
-  if (totalPages <= 1 && (totalCount === undefined || totalCount === 0)) {
-    return null
-  }
+  const startItem = useMemo(
+    () => (totalCount ? (currentPage - 1) * pageSize + 1 : undefined),
+    [totalCount, currentPage, pageSize],
+  )
 
-  const startItem = totalCount ? (currentPage - 1) * pageSize + 1 : undefined
-  const endItem = totalCount
-    ? Math.min(currentPage * pageSize, totalCount)
-    : undefined
+  const endItem = useMemo(
+    () =>
+      totalCount ? Math.min(currentPage * pageSize, totalCount) : undefined,
+    [totalCount, currentPage, pageSize],
+  )
 
-  const getPageNumbers = () => {
+  const pageNumbers = useMemo(() => {
     const pages: number[] = []
     const maxVisible = 5
     let start = Math.max(1, currentPage - Math.floor(maxVisible / 2))
@@ -42,9 +45,19 @@ export function Pagination({
       pages.push(i)
     }
     return pages
-  }
+  }, [currentPage, totalPages])
 
-  const pageNumbers = getPageNumbers()
+  const handlePrevious = useCallback(() => {
+    onPageChange(currentPage - 1)
+  }, [onPageChange, currentPage])
+
+  const handleNext = useCallback(() => {
+    onPageChange(currentPage + 1)
+  }, [onPageChange, currentPage])
+
+  if (totalPages <= 1 && (totalCount === undefined || totalCount === 0)) {
+    return null
+  }
 
   return (
     <div
@@ -86,7 +99,7 @@ export function Pagination({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => onPageChange(currentPage - 1)}
+          onClick={handlePrevious}
           disabled={currentPage <= 1}
           aria-label="Previous page"
         >
@@ -111,7 +124,7 @@ export function Pagination({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => onPageChange(currentPage + 1)}
+          onClick={handleNext}
           disabled={currentPage >= totalPages}
           aria-label="Next page"
         >
