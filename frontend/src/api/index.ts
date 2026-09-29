@@ -1,1 +1,5 @@
 export * from "./client"
+export * from "./auth.service"
+export * from "./companies.service"
+export * from "./contacts.service"
+export * from "./activityLogs.service"

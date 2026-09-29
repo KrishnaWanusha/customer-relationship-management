@@ -1,5 +1,7 @@
 import { Outlet, Link } from "react-router-dom"
 
+const CURRENT_YEAR = new Date().getFullYear()
+
 export function RootLayout() {
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
@@ -21,7 +23,7 @@ export function RootLayout() {
       </main>
 
       <footer className="border-t py-4 text-center text-sm text-muted-foreground">
-        CRM Application &copy; {new Date().getFullYear()}
+        CRM Application &copy; {CURRENT_YEAR}
       </footer>
     </div>
   )
