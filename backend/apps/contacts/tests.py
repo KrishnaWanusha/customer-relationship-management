@@ -3,9 +3,9 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.test import TestCase
-from backend.apps.organizations.models import Organization
-from backend.apps.companies.models import Company
-from backend.apps.contacts.models import Contact
+from apps.organizations.models import Organization
+from apps.companies.models import Company
+from apps.contacts.models import Contact
 
 User = get_user_model()
 
@@ -306,7 +306,7 @@ class ContactAPITest(TestCase):
         self.assertFalse(response.data["success"])
 
     def test_create_contact_success_with_activity_log(self):
-        from backend.apps.activity_logs.models import ActivityLog
+        from apps.activity_logs.models import ActivityLog
 
         self.client.force_authenticate(user=self.manager_user_a)
         payload = {
@@ -444,7 +444,7 @@ class ContactAPITest(TestCase):
         self.assertIn("phone", res_long.data["errors"])
 
     def test_update_contact_put_and_patch(self):
-        from backend.apps.activity_logs.models import ActivityLog
+        from apps.activity_logs.models import ActivityLog
 
         self.client.force_authenticate(user=self.manager_user_a)
 
@@ -492,7 +492,7 @@ class ContactAPITest(TestCase):
         self.assertEqual(response.status_code, 404)
 
     def test_admin_can_soft_delete_contact(self):
-        from backend.apps.activity_logs.models import ActivityLog
+        from apps.activity_logs.models import ActivityLog
 
         self.client.force_authenticate(user=self.admin_user_a)
         response = self.client.delete(f"/api/v1/contacts/{self.contact_a1.id}/")

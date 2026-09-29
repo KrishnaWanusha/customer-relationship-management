@@ -1,11 +1,12 @@
 from django.contrib.auth import get_user_model
+from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from backend.apps.organizations.models import Organization
-from backend.apps.companies.models import Company
-from backend.apps.contacts.models import Contact
-from backend.apps.activity_logs.models import ActivityLog
+from apps.organizations.models import Organization
+from apps.companies.models import Company
+from apps.contacts.models import Contact
+from apps.activity_logs.models import ActivityLog
 
 User = get_user_model()
 

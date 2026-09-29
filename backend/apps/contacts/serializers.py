@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from backend.apps.companies.models import Company
+from apps.companies.models import Company
 from common.serializers import TenantModelSerializer
 from .models import Contact, validate_phone_digits
 

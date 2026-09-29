@@ -1,11 +1,11 @@
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django_multitenant.utils import set_current_tenant, unset_current_tenant
-from backend.apps.organizations.models import Organization
-from backend.apps.accounts.models import User
-from backend.apps.companies.models import Company
-from backend.apps.contacts.models import Contact
-from backend.apps.activity_logs.models import ActivityLog
+from apps.organizations.models import Organization
+from apps.accounts.models import User
+from apps.companies.models import Company
+from apps.contacts.models import Contact
+from apps.activity_logs.models import ActivityLog
 
 
 class Command(BaseCommand):
