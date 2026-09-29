@@ -1,6 +1,8 @@
+from unittest.mock import MagicMock, patch
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.test import RequestFactory, TestCase
+from common.storage import PrivateMediaStorage, generate_presigned_url, get_s3_client
 from apps.accounts.serializers import UserSerializer
 from apps.companies.models import Company
 from apps.contacts.models import Contact
@@ -405,5 +407,70 @@ class RoleBasedAccessControlTest(TestCase):
         staff_data = UserSerializer(self.staff_user).data
         self.assertFalse(staff_data["can_delete"])
         self.assertFalse(staff_data["can_view_activity_logs"])
+
+
+class S3StorageConfigurationTest(TestCase):
+    def test_private_media_storage_settings(self):
+        with patch("common.storage.settings") as mock_settings:
+            mock_settings.AWS_STORAGE_BUCKET_NAME = "secure-crm-bucket"
+            mock_settings.AWS_QUERYSTRING_EXPIRE = 1800
+            storage = PrivateMediaStorage()
+
+            self.assertEqual(storage.default_acl, "private")
+            self.assertFalse(storage.file_overwrite)
+            self.assertFalse(storage.custom_domain)
+            self.assertTrue(storage.querystring_auth)
+            self.assertEqual(storage.querystring_expire, 1800)
+
+    def test_missing_aws_configuration_behavior(self):
+        # Missing bucket name when initializing PrivateMediaStorage
+        with patch("common.storage.settings") as mock_settings:
+            mock_settings.AWS_STORAGE_BUCKET_NAME = ""
+            with self.assertRaises(ImproperlyConfigured) as ctx:
+                PrivateMediaStorage()
+            self.assertIn("AWS_STORAGE_BUCKET_NAME must be configured", str(ctx.exception))
+
+        # Missing bucket name when generating presigned URL
+        with patch("common.storage.settings") as mock_settings:
+            mock_settings.AWS_STORAGE_BUCKET_NAME = ""
+            with self.assertRaises(ImproperlyConfigured) as ctx:
+                generate_presigned_url("organizations/1/companies/2/logos/img.png")
+            self.assertIn("AWS_STORAGE_BUCKET_NAME must be configured", str(ctx.exception))
+
+    @patch("common.storage.get_s3_client")
+    def test_generate_presigned_url(self, mock_get_client):
+        mock_client = MagicMock()
+        mock_client.generate_presigned_url.return_value = "https://secure-crm-bucket.s3.amazonaws.com/test.png?sig=abc"
+        mock_get_client.return_value = mock_client
+
+        with patch("common.storage.settings") as mock_settings:
+            mock_settings.AWS_STORAGE_BUCKET_NAME = "secure-crm-bucket"
+            mock_settings.AWS_QUERYSTRING_EXPIRE = 3600
+
+            url = generate_presigned_url("logos/test.png", expiration=1800)
+            mock_client.generate_presigned_url.assert_called_once_with(
+                ClientMethod="get_object",
+                Params={"Bucket": "secure-crm-bucket", "Key": "logos/test.png"},
+                ExpiresIn=1800,
+            )
+            self.assertEqual(url, "https://secure-crm-bucket.s3.amazonaws.com/test.png?sig=abc")
+
+    @patch("boto3.client")
+    def test_get_s3_client_respects_settings(self, mock_boto3_client):
+        with patch("common.storage.settings") as mock_settings:
+            mock_settings.AWS_S3_REGION_NAME = "eu-west-1"
+            mock_settings.AWS_ACCESS_KEY_ID = "test-access-key"
+            mock_settings.AWS_SECRET_ACCESS_KEY = "test-secret-key"
+            mock_settings.AWS_S3_ENDPOINT_URL = "https://custom-s3.endpoint.com"
+
+            get_s3_client()
+            mock_boto3_client.assert_called_once_with(
+                "s3",
+                region_name="eu-west-1",
+                aws_access_key_id="test-access-key",
+                aws_secret_access_key="test-secret-key",
+                endpoint_url="https://custom-s3.endpoint.com",
+            )
+
 
 

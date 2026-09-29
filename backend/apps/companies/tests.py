@@ -1,13 +1,26 @@
+import io
 import uuid
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APITestCase
+from PIL import Image
 from apps.activity_logs.models import ActivityLog
-from apps.companies.models import Company
+from apps.companies.models import Company, company_logo_upload_path
+from apps.companies.validators import validate_company_logo
 from apps.organizations.models import Organization
 
 User = get_user_model()
+
+
+def create_test_image(img_format="PNG", size=(50, 50), color="blue"):
+    file_obj = io.BytesIO()
+    image = Image.new("RGB", size, color=color)
+    image.save(file_obj, format=img_format)
+    file_obj.seek(0)
+    return file_obj.read()
 
 
 class CompanyModelTest(TestCase):
@@ -331,3 +344,127 @@ class CompanyAPITest(APITestCase):
         results2 = res2.data["data"]["results"]
         self.assertEqual(len(results2), 1)
         self.assertEqual(results2[0]["name"], "Alpha Logistics")
+
+
+class CompanyLogoUploadAndStorageTest(APITestCase):
+    def setUp(self):
+        self.org = Organization.objects.create(name="Stark Industries")
+        self.admin = User.objects.create_user(
+            email="tony@stark.com",
+            password="password123",
+            organization=self.org,
+            role=User.Role.ADMIN,
+        )
+        self.client.force_authenticate(user=self.admin)
+
+    def test_validate_company_logo_success(self):
+        png_data = create_test_image(img_format="PNG")
+        uploaded_png = SimpleUploadedFile("logo.png", png_data, content_type="image/png")
+        # Should not raise
+        validate_company_logo(uploaded_png)
+
+        jpeg_data = create_test_image(img_format="JPEG")
+        uploaded_jpeg = SimpleUploadedFile("logo.jpg", jpeg_data, content_type="image/jpeg")
+        # Should not raise
+        validate_company_logo(uploaded_jpeg)
+
+    def test_validate_company_logo_file_size_exceeded(self):
+        # 3MB oversized file
+        oversized_data = b"x" * (3 * 1024 * 1024)
+        uploaded = SimpleUploadedFile("large_logo.png", oversized_data, content_type="image/png")
+        with self.assertRaises(ValidationError) as ctx:
+            validate_company_logo(uploaded)
+        self.assertIn("exceeds the 2MB limit", str(ctx.exception))
+
+    def test_validate_company_logo_invalid_extension(self):
+        img_data = create_test_image(img_format="PNG")
+        uploaded = SimpleUploadedFile("logo.svg", img_data, content_type="image/svg+xml")
+        with self.assertRaises(ValidationError) as ctx:
+            validate_company_logo(uploaded)
+        self.assertIn("Unsupported file extension", str(ctx.exception))
+
+    def test_validate_company_logo_corrupt_or_fake_image(self):
+        fake_data = b"This is plain text, not a valid image."
+        uploaded = SimpleUploadedFile("fake_logo.png", fake_data, content_type="image/png")
+        with self.assertRaises(ValidationError) as ctx:
+            validate_company_logo(uploaded)
+        self.assertIn("not a valid or readable image", str(ctx.exception))
+
+    def test_upload_path_configuration(self):
+        company = Company.objects.create(
+            name="Stark Tech",
+            organization=self.org,
+        )
+        path = company_logo_upload_path(company, "original_user_logo.PNG")
+        expected_prefix = f"organizations/{self.org.id}/companies/{company.id}/logos/"
+
+        self.assertTrue(path.startswith(expected_prefix))
+        self.assertNotIn("original_user_logo", path)
+        self.assertTrue(path.endswith(".png"))
+
+    def test_api_create_company_with_logo(self):
+        img_data = create_test_image(img_format="PNG")
+        logo_file = SimpleUploadedFile("stark_logo.png", img_data, content_type="image/png")
+
+        response = self.client.post(
+            "/api/v1/companies/",
+            {
+                "name": "Stark Aerospace",
+                "industry": "Aerospace",
+                "country": "US",
+                "logo": logo_file,
+            },
+            format="multipart",
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        data = response.data["data"]
+        self.assertIsNotNone(data["logo"])
+        self.assertIsNotNone(data["logo_url"])
+        self.assertEqual(data["logo"], data["logo_url"])
+
+        # Check DB
+        company = Company.objects.get(id=data["id"])
+        self.assertTrue(bool(company.logo))
+        self.assertTrue(company.logo.name.startswith(f"organizations/{self.org.id}/companies/{company.id}/logos/"))
+
+    def test_api_create_company_with_invalid_logo(self):
+        fake_file = SimpleUploadedFile("bad_logo.png", b"Not an image", content_type="image/png")
+        response = self.client.post(
+            "/api/v1/companies/",
+            {
+                "name": "Invalid Logo Corp",
+                "logo": fake_file,
+            },
+            format="multipart",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("logo", response.data["errors"])
+
+    def test_api_update_company_logo(self):
+        company = Company.objects.create(
+            name="Stark Energy",
+            organization=self.org,
+        )
+        img_data = create_test_image(img_format="JPEG", color="red")
+        new_logo = SimpleUploadedFile("arc_reactor.jpg", img_data, content_type="image/jpeg")
+
+        response = self.client.patch(
+            f"/api/v1/companies/{company.id}/",
+            {"logo": new_logo},
+            format="multipart",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        company.refresh_from_db()
+        self.assertTrue(bool(company.logo))
+        self.assertTrue(company.logo.name.endswith(".jpg"))
+
+    def test_api_company_logo_representation_null_when_empty(self):
+        company = Company.objects.create(
+            name="No Logo Corp",
+            organization=self.org,
+        )
+        response = self.client.get(f"/api/v1/companies/{company.id}/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.data["data"]
+        self.assertIsNone(data["logo"])
+        self.assertIsNone(data["logo_url"])

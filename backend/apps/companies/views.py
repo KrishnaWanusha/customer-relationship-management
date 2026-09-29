@@ -1,6 +1,7 @@
 from django.db.models import Count, Q
 from rest_framework import status, viewsets
 from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from django_filters.rest_framework import DjangoFilterBackend
 from common.responses import api_success
 from common.views import TenantFilteredViewSetMixin
@@ -13,6 +14,7 @@ from .services import CompanyService
 class CompanyViewSet(TenantFilteredViewSetMixin, viewsets.ModelViewSet):
     queryset = Company.objects.all()
     serializer_class = CompanySerializer
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class = CompanyFilter
     search_fields = ["name", "industry", "country"]
