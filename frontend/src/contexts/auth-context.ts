@@ -7,13 +7,16 @@ export interface AuthContextValue {
   status: AuthState["status"]
   isAuthenticated: boolean
   isLoading: boolean
+  sessionExpired: boolean
   error: string | null
   login: (credentials: LoginCredentials) => Promise<void>
   logout: () => Promise<void>
   refreshSession: () => Promise<boolean>
 }
 
-export const AuthContext = createContext<AuthContextValue | undefined>(undefined)
+export const AuthContext = createContext<AuthContextValue | undefined>(
+  undefined,
+)
 
 export function useAuthContext(): AuthContextValue {
   const context = useContext(AuthContext)

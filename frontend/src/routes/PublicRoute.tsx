@@ -5,7 +5,9 @@ import { FullPageLoading } from "@/components"
 export function PublicRoute({ children }: { children?: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth()
   const location = useLocation()
-  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || "/dashboard"
+  const from =
+    (location.state as { from?: { pathname: string } })?.from?.pathname ||
+    "/dashboard"
 
   if (isLoading) {
     return <FullPageLoading message="Loading..." />

@@ -42,11 +42,17 @@ export function LoadingState({
   )
 }
 
-export function FullPageLoading({ message = "Initializing..." }: { message?: string }) {
+export function FullPageLoading({
+  message = "Initializing...",
+}: {
+  message?: string
+}) {
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm">
       <Spinner size="lg" className="h-12 w-12 mb-4 text-primary" />
-      <p className="text-sm font-medium text-muted-foreground tracking-wide">{message}</p>
+      <p className="text-sm font-medium text-muted-foreground tracking-wide">
+        {message}
+      </p>
     </div>
   )
 }

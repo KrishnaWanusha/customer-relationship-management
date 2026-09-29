@@ -127,15 +127,76 @@ apiClient.interceptors.response.use(
 )
 
 const normalizeError = (
-  error: AxiosError<{ message?: string; errors?: Record<string, string[]> }>,
+  error: AxiosError<{
+    message?: string
+    detail?: string
+    errors?: Record<string, string[]>
+    [key: string]: unknown
+  }>,
 ): ApiError => {
+  const data = error.response?.data
+  let extractedErrors: Record<string, string[]> | undefined = data?.errors
+
+  if (
+    !extractedErrors &&
+    data &&
+    typeof data === "object" &&
+    !Array.isArray(data)
+  ) {
+    const fieldErrors: Record<string, string[]> = {}
+    let hasFieldErrors = false
+
+    for (const [key, val] of Object.entries(data)) {
+      if (
+        key !== "message" &&
+        key !== "success" &&
+        key !== "status" &&
+        key !== "detail"
+      ) {
+        if (
+          Array.isArray(val) &&
+          val.every((item) => typeof item === "string")
+        ) {
+          fieldErrors[key] = val
+          hasFieldErrors = true
+        } else if (typeof val === "string") {
+          fieldErrors[key] = [val]
+          hasFieldErrors = true
+        }
+      }
+    }
+
+    if (hasFieldErrors) {
+      extractedErrors = fieldErrors
+    }
+  }
+
+  let message = data?.message || data?.detail
+
+  if (!message && extractedErrors) {
+    if (extractedErrors.non_field_errors?.length) {
+      message = extractedErrors.non_field_errors[0]
+    } else {
+      const firstField = Object.keys(extractedErrors)[0]
+      if (firstField && extractedErrors[firstField]?.length) {
+        message = extractedErrors[firstField][0]
+      }
+    }
+  }
+
+  if (!message) {
+    if (error.code === "ERR_NETWORK" || !error.response) {
+      message =
+        "Unable to connect to server. Please check your network connection."
+    } else {
+      message = error.message || "An unexpected error occurred"
+    }
+  }
+
   return {
-    message:
-      error.response?.data?.message ||
-      error.message ||
-      "An unexpected error occurred",
+    message,
     status: error.response?.status,
-    errors: error.response?.data?.errors,
+    errors: extractedErrors,
   }
 }
 

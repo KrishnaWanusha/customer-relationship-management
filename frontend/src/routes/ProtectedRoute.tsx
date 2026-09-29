@@ -8,7 +8,10 @@ export interface ProtectedRouteProps {
   children?: React.ReactNode
 }
 
-export function ProtectedRoute({ allowedRoles, children }: ProtectedRouteProps) {
+export function ProtectedRoute({
+  allowedRoles,
+  children,
+}: ProtectedRouteProps) {
   const { user, isAuthenticated, isLoading } = useAuth()
   const location = useLocation()
 
@@ -20,12 +23,19 @@ export function ProtectedRoute({ allowedRoles, children }: ProtectedRouteProps) 
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
-  if (allowedRoles && allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
+  if (
+    allowedRoles &&
+    allowedRoles.length > 0 &&
+    !allowedRoles.includes(user.role)
+  ) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
-        <h2 className="text-xl font-bold text-destructive mb-2">Access Denied</h2>
+        <h2 className="text-xl font-bold text-destructive mb-2">
+          Access Denied
+        </h2>
         <p className="text-muted-foreground max-w-md">
-          Your role ({user.role}) does not have permission to access this resource.
+          Your role ({user.role}) does not have permission to access this
+          resource.
         </p>
       </div>
     )

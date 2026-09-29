@@ -11,7 +11,10 @@ export function RootLayout() {
             CRM System
           </Link>
           <nav className="flex items-center gap-4 text-sm font-medium">
-            <Link to="/" className="text-muted-foreground hover:text-foreground transition-colors">
+            <Link
+              to="/"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
               Home
             </Link>
           </nav>

@@ -24,12 +24,15 @@ export function CompanyDetailsPage() {
             <Building2 className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-foreground">Company Details</h1>
+            <h1 className="text-xl font-bold text-foreground">
+              Company Details
+            </h1>
             <p className="text-xs text-muted-foreground font-mono">ID: {id}</p>
           </div>
         </div>
         <p className="text-sm text-muted-foreground">
-          Detailed company information, logo management, and associated contacts will be loaded here.
+          Detailed company information, logo management, and associated contacts
+          will be loaded here.
         </p>
       </div>
     </div>

@@ -47,7 +47,9 @@ export function AppLayout() {
       to: "/activity-logs",
       label: "Activity Logs",
       icon: History,
-      show: user?.can_view_activity_logs ?? (user?.role === "ADMIN" || user?.role === "MANAGER"),
+      show:
+        user?.can_view_activity_logs ??
+        (user?.role === "ADMIN" || user?.role === "MANAGER"),
     },
   ]
 
@@ -114,11 +116,18 @@ export function AppLayout() {
           <div className="flex items-center justify-between gap-2 mb-3">
             <div className="truncate min-w-0">
               <p className="text-sm font-semibold truncate text-foreground">
-                {user ? `${user.first_name} ${user.last_name}`.trim() || user.email : "User"}
+                {user
+                  ? `${user.first_name} ${user.last_name}`.trim() || user.email
+                  : "User"}
               </p>
-              <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+              <p className="text-xs text-muted-foreground truncate">
+                {user?.email}
+              </p>
             </div>
-            <Badge variant={getRoleVariant(user?.role)} className="shrink-0 text-[10px] px-1.5 py-0.5">
+            <Badge
+              variant={getRoleVariant(user?.role)}
+              className="shrink-0 text-[10px] px-1.5 py-0.5"
+            >
               <Shield className="h-3 w-3 mr-0.5" />
               {user?.role}
             </Badge>
@@ -151,7 +160,11 @@ export function AppLayout() {
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Toggle navigation menu"
           >
-            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            {mobileMenuOpen ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Menu className="h-5 w-5" />
+            )}
           </Button>
         </header>
 
@@ -182,8 +195,15 @@ export function AppLayout() {
                 )
               })}
             <div className="pt-2 border-t border-border flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">{user?.email}</span>
-              <Button variant="ghost" size="sm" onClick={handleLogout} className="text-destructive text-xs">
+              <span className="text-xs text-muted-foreground">
+                {user?.email}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                className="text-destructive text-xs"
+              >
                 <LogOut className="h-3.5 w-3.5 mr-1" />
                 Sign Out
               </Button>

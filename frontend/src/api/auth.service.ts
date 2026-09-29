@@ -8,7 +8,9 @@ import type {
 } from "@/types"
 
 export const authService = {
-  async login(credentials: LoginCredentials): Promise<ApiResponse<LoginResponseData>> {
+  async login(
+    credentials: LoginCredentials,
+  ): Promise<ApiResponse<LoginResponseData>> {
     const response = await apiClient.post<ApiResponse<LoginResponseData>>(
       "/auth/login/",
       credentials,
@@ -17,7 +19,10 @@ export const authService = {
   },
 
   async logout(): Promise<ApiResponse<null>> {
-    const response = await apiClient.post<ApiResponse<null>>("/auth/logout/", {})
+    const response = await apiClient.post<ApiResponse<null>>(
+      "/auth/logout/",
+      {},
+    )
     return response.data
   },
 

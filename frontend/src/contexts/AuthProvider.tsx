@@ -20,13 +20,14 @@ type AuthAction =
   | { type: "AUTH_SUCCESS"; payload: { user: User; token: string } }
   | { type: "SET_TOKEN"; payload: { token: string } }
   | { type: "AUTH_FAILURE"; payload: { error: string } }
-  | { type: "AUTH_LOGOUT" }
+  | { type: "AUTH_LOGOUT"; payload?: { expired?: boolean } }
 
 const initialState: AuthState = {
   user: null,
   token: null,
   status: "loading",
   error: null,
+  sessionExpired: false,
 }
 
 function authReducer(state: AuthState, action: AuthAction): AuthState {
@@ -34,8 +35,8 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
     case "AUTH_START":
       return {
         ...state,
-        status: "loading",
         error: null,
+        sessionExpired: false,
       }
     case "AUTH_SUCCESS":
       return {
@@ -44,6 +45,7 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
         token: action.payload.token,
         status: "authenticated",
         error: null,
+        sessionExpired: false,
       }
     case "SET_TOKEN":
       return {
@@ -57,6 +59,7 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
         token: null,
         status: "unauthenticated",
         error: action.payload.error,
+        sessionExpired: false,
       }
     case "AUTH_LOGOUT":
       return {
@@ -64,6 +67,7 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
         token: null,
         status: "unauthenticated",
         error: null,
+        sessionExpired: action.payload?.expired ?? false,
       }
     default:
       return state
@@ -82,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Ignore network errors on logout
     } finally {
       setAccessToken(null)
-      dispatch({ type: "AUTH_LOGOUT" })
+      dispatch({ type: "AUTH_LOGOUT", payload: { expired: false } })
     }
   }, [])
 
@@ -108,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return true
       } catch {
         setAccessToken(null)
-        dispatch({ type: "AUTH_LOGOUT" })
+        dispatch({ type: "AUTH_LOGOUT", payload: { expired: false } })
         return false
       } finally {
         inFlightRefreshRef.current = null
@@ -144,7 +148,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     registerUnauthorizedHandler(() => {
       setAccessToken(null)
-      dispatch({ type: "AUTH_LOGOUT" })
+      // If user was logged in and refresh failed, flag sessionExpired
+      dispatch({ type: "AUTH_LOGOUT", payload: { expired: true } })
     })
 
     registerTokenRefreshedHandler((newToken) => {
@@ -166,6 +171,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       status: state.status,
       isAuthenticated: state.status === "authenticated",
       isLoading: state.status === "loading",
+      sessionExpired: state.sessionExpired,
       error: state.error,
       login,
       logout,
@@ -176,6 +182,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       state.token,
       state.status,
       state.error,
+      state.sessionExpired,
       login,
       logout,
       refreshSession,

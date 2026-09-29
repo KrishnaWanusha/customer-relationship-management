@@ -33,11 +33,16 @@ export interface RefreshResponseData {
   access: string
 }
 
-export type AuthStatus = "idle" | "loading" | "authenticated" | "unauthenticated"
+export type AuthStatus =
+  | "idle"
+  | "loading"
+  | "authenticated"
+  | "unauthenticated"
 
 export interface AuthState {
   user: User | null
   token: string | null
   status: AuthStatus
   error: string | null
+  sessionExpired: boolean
 }

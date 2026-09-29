@@ -39,7 +39,8 @@ export function DashboardPage() {
             </div>
           </div>
           <p className="text-sm text-muted-foreground mb-4">
-            Manage your organization&apos;s corporate accounts, logos, and details.
+            Manage your organization&apos;s corporate accounts, logos, and
+            details.
           </p>
           <Link
             to="/companies"
